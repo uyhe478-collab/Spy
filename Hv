@@ -1,0 +1,114 @@
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local root = char:WaitForChild("HumanoidRootPart")
+
+-- 1. สร้าง GUI ใหม่ (ย้ายไปทางซ้ายจะได้ไม่บังตัวละคร)
+local sg = Instance.new("ScreenGui", player.PlayerGui)
+sg.Name = "SpyV2"
+
+-- เมนูรายชื่อ (ย้ายไปฝั่งซ้ายกลางจอ)
+local scrollFrame = Instance.new("ScrollingFrame", sg)
+scrollFrame.Size = UDim2.new(0, 180, 0, 250)
+scrollFrame.Position = UDim2.new(0.05, 0, 0.3, 0) -- ฝั่งซ้าย
+scrollFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+scrollFrame.BackgroundTransparency = 0.3
+scrollFrame.Visible = false
+
+-- ปุ่มเปิด/ปิดเมนู
+local menuBtn = Instance.new("TextButton", sg)
+menuBtn.Size = UDim2.new(0, 120, 0, 40)
+menuBtn.Position = UDim2.new(0.05, 0, 0.23, 0)
+menuBtn.Text = "SELECT TARGET"
+menuBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+menuBtn.TextColor3 = Color3.new(1, 1, 1)
+
+-- ปุ่มล่องหน (ไว้ที่เดิม หรือย้ายมาซ้ายล่าง)
+local cloakBtn = Instance.new("TextButton", sg)
+cloakBtn.Size = UDim2.new(0, 120, 0, 40)
+cloakBtn.Position = UDim2.new(0.05, 0, 0.65, 0)
+cloakBtn.Text = "CLOAK (OFF)"
+cloakBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+cloakBtn.TextColor3 = Color3.new(1, 1, 1)
+
+local isInvisible = false
+
+-- 2. ฟังก์ชันเอฟเฟกต์ (ควัน + เสียง)
+local function playSpyEffect(soundId)
+    local s = Instance.new("Sound", root)
+    s.SoundId = "rbxassetid://" .. soundId
+    s:Play()
+    
+    local smoke = Instance.new("ParticleEmitter")
+    smoke.Color = ColorSequence.new(Color3.fromRGB(220, 220, 220))
+    smoke.Size = NumberSequence.new(3, 6)
+    smoke.Lifetime = NumberRange.new(0.5, 0.8)
+    smoke.Rate = 150
+    smoke.Parent = root
+    
+    task.wait(0.4)
+    smoke.Enabled = false
+    game:GetService("Debris"):AddItem(smoke, 1)
+    game:GetService("Debris"):AddItem(s, 2)
+end
+
+-- 3. ระบบล่องหน (คนอื่นจะเห็นแค่ควันตอนกด แต่ไม่เห็นตัวเรา)
+cloakBtn.MouseButton1Click:Connect(function()
+    isInvisible = not isInvisible
+    playSpyEffect(isInvisible and 260430060 or 260430132)
+    
+    cloakBtn.Text = isInvisible and "CLOAK (ON)" or "CLOAK (OFF)"
+    cloakBtn.BackgroundColor3 = isInvisible and Color3.fromRGB(0, 80, 0) or Color3.fromRGB(80, 0, 0)
+
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") or part:IsA("Decal") then
+            part.Transparency = isInvisible and 1 or 0 -- 1 คือหายตัวสนิท
+        end
+    end
+end)
+
+-- 4. ระบบแปลงร่าง (ก๊อปปี้เสื้อผ้า)
+local function disguise(targetPlayer)
+    if targetPlayer and targetPlayer.Character then
+        playSpyEffect(511340656)
+        
+        -- ลบชุดเก่า
+        for _, item in pairs(char:GetChildren()) do
+            if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("Accessory") or item:IsA("BodyColors") then
+                item:Destroy()
+            end
+        end
+        
+        -- ก๊อปปี้ชุดใหม่จากเป้าหมาย
+        for _, item in pairs(targetPlayer.Character:GetChildren()) do
+            if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("Accessory") or item:IsA("BodyColors") then
+                local clone = item:Clone()
+                clone.Parent = char
+            end
+        end
+        
+        char.Humanoid.DisplayName = targetPlayer.DisplayName
+        scrollFrame.Visible = false
+    end
+end
+
+-- 5. อัปเดตรายชื่อ
+local function updateList()
+    for _, c in pairs(scrollFrame:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+    local layout = Instance.new("UIListLayout", scrollFrame)
+    
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p ~= player then
+            local btn = Instance.new("TextButton", scrollFrame)
+            btn.Size = UDim2.new(1, 0, 0, 35)
+            btn.Text = p.DisplayName
+            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            btn.TextColor3 = Color3.new(1, 1, 1)
+            btn.MouseButton1Click:Connect(function() disguise(p) end)
+        end
+    end
+end
+
+menuBtn.MouseButton1Click:Connect(function()
+    scrollFrame.Visible = not scrollFrame.Visible
+    if scrollFrame.Visible then updateList() end
+end)
