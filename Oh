@@ -1,0 +1,104 @@
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hum = char:WaitForChild("Humanoid")
+local root = char:WaitForChild("HumanoidRootPart")
+
+-- 1. Create GUI
+local sg = Instance.new("ScreenGui", player.PlayerGui)
+sg.Name = "SpySystem"
+
+-- Cloak Button
+local cloakBtn = Instance.new("TextButton", sg)
+cloakBtn.Size = UDim2.new(0, 150, 0, 50)
+cloakBtn.Position = UDim2.new(0.8, 0, 0.8, 0)
+cloakBtn.Text = "CLOAK / UNCLOAK"
+cloakBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+cloakBtn.TextColor3 = Color3.new(1, 1, 1)
+
+-- Disguise Menu Button
+local menuBtn = Instance.new("TextButton", sg)
+menuBtn.Size = UDim2.new(0, 150, 0, 50)
+menuBtn.Position = UDim2.new(0.8, 0, 0.7, 0)
+menuBtn.Text = "DISGUISE LIST"
+
+-- Player List Frame
+local scrollFrame = Instance.new("ScrollingFrame", sg)
+scrollFrame.Size = UDim2.new(0, 200, 0, 300)
+scrollFrame.Position = UDim2.new(0.4, 0, 0.3, 0)
+scrollFrame.Visible = false
+scrollFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+
+local isInvisible = false
+
+-- 2. Function for Smoke & Sounds
+local function playSpyEffect(soundId)
+    -- Smoke Effect
+    local smoke = Instance.new("ParticleEmitter")
+    smoke.Color = ColorSequence.new(Color3.fromRGB(200, 200, 200))
+    smoke.Size = NumberSequence.new(2, 4)
+    smoke.Lifetime = NumberRange.new(0.5, 1)
+    smoke.Rate = 100
+    smoke.Parent = root
+    
+    -- Sound Effect
+    local s = Instance.new("Sound", root)
+    s.SoundId = "rbxassetid://" .. soundId
+    s:Play()
+    
+    task.wait(0.3)
+    smoke.Enabled = false
+    game:GetService("Debris"):AddItem(smoke, 1)
+    game:GetService("Debris"):AddItem(s, 2)
+end
+
+-- 3. Cloak System
+cloakBtn.MouseButton1Click:Connect(function()
+    isInvisible = not isInvisible
+    
+    if isInvisible then
+        playSpyEffect(260430060) -- Cloak Sound
+    else
+        playSpyEffect(260430132) -- Uncloak Sound
+    end
+    
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") or part:IsA("Decal") then
+            part.Transparency = isInvisible and 0.95 or 0
+        end
+    end
+end)
+
+-- 4. Disguise System
+local function updateList()
+    for _, child in pairs(scrollFrame:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    local layout = Instance.new("UIListLayout", scrollFrame)
+    
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p ~= player then
+            local pBtn = Instance.new("TextButton", scrollFrame)
+            pBtn.Size = UDim2.new(1, 0, 0, 30)
+            pBtn.Text = p.DisplayName
+            pBtn.MouseButton1Click:Connect(function()
+                playSpyEffect(511340656) -- Disguise Smoke Sound
+                
+                -- Change Appearance
+                local success, desc = pcall(function() 
+                    return game.Players:GetHumanoidDescriptionFromUserId(p.UserId) 
+                end)
+                if success then
+                    hum:ApplyDescription(desc)
+                    hum.DisplayName = p.DisplayName
+                end
+                scrollFrame.Visible = false
+            end)
+        end
+    end
+end
+
+menuBtn.MouseButton1Click:Connect(function()
+    scrollFrame.Visible = not scrollFrame.Visible
+    if scrollFrame.Visible then updateList() end
+end)
