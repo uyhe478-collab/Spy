@@ -1,0 +1,75 @@
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local root = char:WaitForChild("HumanoidRootPart")
+
+-- 1. สร้าง GUI
+local sg = Instance.new("ScreenGui", player.PlayerGui)
+sg.Name = "SpyToggleV5"
+
+-- ปุ่มรวม (Toggle Button)
+local btn = Instance.new("TextButton", sg)
+btn.Size = UDim2.new(0, 150, 0, 50)
+btn.Position = UDim2.new(0.05, 0, 0.75, 0) -- ไว้ฝั่งซ้าย
+btn.Text = "CLOAK: OFF"
+btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+btn.TextColor3 = Color3.new(1, 1, 1)
+btn.Font = Enum.Font.SourceSansBold
+btn.TextSize = 18
+
+local isInvis = false
+
+-- 2. ฟังก์ชันสร้างควัน (พุ่งออกมาตอนปิดล่องหน)
+local function puffSmoke()
+    local smoke = Instance.new("ParticleEmitter")
+    smoke.Color = ColorSequence.new(Color3.fromRGB(200, 200, 200))
+    smoke.Size = NumberSequence.new(2, 5)
+    smoke.Lifetime = NumberRange.new(0.5, 1)
+    smoke.Rate = 250
+    smoke.Speed = NumberRange.new(3, 6)
+    smoke.Parent = root
+    
+    task.wait(0.2) -- ควันพุ่งออกมาแวบเดียว
+    smoke.Enabled = false
+    game:GetService("Debris"):AddItem(smoke, 1)
+end
+
+-- 3. ฟังก์ชันเล่นเสียง
+local function playSfx(id)
+    local s = Instance.new("Sound", root)
+    s.SoundId = "rbxassetid://" .. id
+    s.Volume = 1
+    s:Play()
+    game:GetService("Debris"):AddItem(s, 2)
+end
+
+-- 4. ระบบการทำงานของปุ่มเดียว (Toggle)
+btn.MouseButton1Click:Connect(function()
+    isInvis = not isInvis -- สลับค่าไปมาระหว่าง เปิด/ปิด
+    
+    if isInvis then
+        -- จังหวะเปิดล่องหน
+        btn.Text = "CLOAK: ON"
+        btn.BackgroundColor3 = Color3.fromRGB(0, 150, 0) -- เปลี่ยนปุ่มเป็นสีเขียว
+        playSfx(260430060) -- เสียงเปิดนาฬิกา
+        
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") or part:IsA("Decal") then
+                if part.Name ~= "HumanoidRootPart" then
+                    part.Transparency = 1 -- หายตัว
+                end
+            end
+        end
+    else
+        -- จังหวะปิดล่องหน
+        btn.Text = "CLOAK: OFF"
+        btn.BackgroundColor3 = Color3.fromRGB(150, 0, 0) -- เปลี่ยนปุ่มเป็นสีแดง
+        playSfx(260430132) -- เสียงปิดนาฬิกา
+        puffSmoke() -- มีควันพุ่งออกมานิดนึงตอนคนโผล่มา
+        
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") or part:IsA("Decal") then
+                part.Transparency = 0 -- กลับมามองเห็น
+            end
+        end
+    end
+end)
