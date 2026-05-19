@@ -1,0 +1,84 @@
+-- [[ Dead Rails Vampire Ultimate Lag-Free 🧛🔥 ]] --
+-- แก้ไข: ล็อคเลือดเด้งไว / หลอดเลือดไม่หาย / ไม่แก้ขนาดโมเดล / ระยะไม่ไกลเกินไป
+
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hum = char:WaitForChild("Humanoid")
+
+-- ระบบป้องกันหลอดเลือดหายเมื่อเกิดใหม่ (อัพเดทตัวละครอัตโนมัติ)
+player.CharacterAdded:Connect(function(newChar)
+    char = newChar
+    hum = char:WaitForChild("Humanoid")
+end)
+
+local sgui = Instance.new("ScreenGui")
+sgui.Name = "VampireLagFree"
+sgui.Parent = player:WaitForChild("PlayerGui")
+
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 180, 0, 45)
+button.Position = UDim2.new(0.75, 0, 0.05, 0) 
+button.BackgroundColor3 = Color3.fromRGB(30, 0, 50) 
+button.Text = "เปิดโหมดกันค้าง 🛡️"
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 14
+button.Parent = sgui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = button
+
+local active = false
+
+-- 1. ระบบล็อคเลือดแบบอมตะและทำงานรวดเร็ว (เช็คตลอดเวลาถ้าเปิดโหมด)
+task.spawn(function()
+    while true do
+        task.wait() -- ทำงานไวระดับมิลลิวินาที
+        if active and hum and hum.Parent then
+            if hum.Health < hum.MaxHealth then
+                hum.Health = hum.MaxHealth
+            end
+        end
+    end
+end)
+
+-- 2. ระบบโจมตีรวดเร็ว (ล็อคระยะ 50 เมตรเท่าเดิม ไม่ขยายขนาดตัวมอนสเตอร์)
+local function killNearby()
+    if not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    for _, v in pairs(game.Workspace:GetChildren()) do
+        if v:IsA("Model") and v:FindFirstChild("Humanoid") then
+            if not game.Players:GetPlayerFromCharacter(v) then
+                local root = v:FindFirstChild("HumanoidRootPart")
+                local targetHum = v:FindFirstChild("Humanoid")
+                
+                if root and targetHum and targetHum.Health > 0 then
+                    local dist = (root.Position - char.HumanoidRootPart.Position).Magnitude
+                    -- ระยะ 50 เมตรกำลังดี ไม่ตีไกลเวอร์เหมือนสคริปต์เก่า
+                    if dist < 50 then 
+                        targetHum.Health = 0
+                    end
+                end
+            end
+        end
+    end
+end
+
+button.Activated:Connect(function()
+    active = not active
+    if active then
+        button.Text = "แวมไพร์ลื่นๆ! ✅"
+        button.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        
+        task.spawn(function()
+            while active do
+                killNearby()
+                task.wait(0.1) -- ความเร็วสับๆ ไวขึ้นกว่าเดิม 5 เท่า เครื่องไม่ค้าง
+            end
+        end)
+    else
+        button.Text = "เปิดโหมดกันค้าง 🛡️"
+        button.BackgroundColor3 = Color3.fromRGB(30, 0, 50)
+    end
+end)
