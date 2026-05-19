@@ -1,0 +1,72 @@
+-- [[ Dead Rails Vampire Speed-Optimized 🧛💨 - แก้ไขตามรีเควส ]] --
+
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hum = char:WaitForChild("Humanoid")
+
+local sgui = Instance.new("ScreenGui")
+sgui.Name = "VampireLagFree"
+sgui.Parent = player:WaitForChild("PlayerGui")
+
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 180, 0, 45)
+button.Position = UDim2.new(0.75, 0, 0.05, 0) 
+button.BackgroundColor3 = Color3.fromRGB(30, 0, 50) 
+button.Text = "เปิดโหมดกันค้าง 🛡️"
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 14
+button.Parent = sgui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = button
+
+local active = false
+
+-- 1. ล็อคเลือดแบบ Real-time
+hum.HealthChanged:Connect(function()
+    if active and hum.Health < hum.MaxHealth then
+        hum.Health = hum.MaxHealth
+    end
+end)
+
+-- 2. ระบบฆ่ารวดเร็ว (ล็อคระยะเท่าเดิม ไม่แก้ขนาดเครื่องไม่แล็ก)
+local function killNearby()
+    -- ปรับหาเฉพาะในโฟลเดอร์มอนสเตอร์หรือ Workspace (เช็คเร็วขึ้น)
+    for _, v in pairs(game.Workspace:GetChildren()) do
+        if v:IsA("Model") and v:FindFirstChild("Humanoid") then
+            if not game.Players:GetPlayerFromCharacter(v) then
+                local root = v:FindFirstChild("HumanoidRootPart")
+                local targetHum = v:FindFirstChild("Humanoid")
+                
+                if root and targetHum and targetHum.Health > 0 then
+                    local dist = (root.Position - char.HumanoidRootPart.Position).Magnitude
+                    -- ล็อคระยะไว้เท่าเดิม (ไม่ให้ตีไกลเวอร์ เน้นเดินเข้ามาระยะแล้วตายรวดเร็ว)
+                    if dist < 50 then 
+                        targetHum.Health = 0
+                    end
+                end
+            end
+        end
+    end
+end
+
+button.Activated:Connect(function()
+    active = not active
+    if active then
+        button.Text = "แวมไพร์ลื่นๆ! ✅"
+        button.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        
+        task.spawn(function()
+            while active do
+                killNearby()
+                -- ใช้ task.wait() เปล่าๆ เพื่อความรวดเร็วสูงสุด แต่ไม่ทำให้ Hitbox บั๊กจนเครื่องค้าง
+                task.wait(0.1) 
+            end
+        end)
+    else
+        button.Text = "เปิดโหมดกันค้าง 🛡️"
+        button.BackgroundColor3 = Color3.fromRGB(30, 0, 50)
+    end
+end)
